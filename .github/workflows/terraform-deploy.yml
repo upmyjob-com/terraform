@@ -1,0 +1,63 @@
+name: Deploy Terraform Manifests
+
+on:
+  push:
+    branches:
+      - upmyjob
+      - dev
+      - main
+
+env:
+  PROD_ACCOUNT_ID: "471112657820"
+  DEV_ACCOUNT_ID: "891377034613"
+  UPMYJOB_ACCOUNT_ID: "962410476174"
+  REGION: "us-east-2"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set environment variables based on branch
+        id: env-setup
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "AWS_ACCOUNT=${{ env.PROD_ACCOUNT_ID }}" >> $GITHUB_ENV
+            echo "ROLE_ARN=arn:aws:iam::${{ env.PROD_ACCOUNT_ID }}:role/GitHubActionsRole" >> $GITHUB_ENV
+            echo "ENV_NAME=prod" >> $GITHUB_ENV
+            echo "MANIFEST_PATH=terraform/accounts/prod" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            echo "AWS_ACCOUNT=${{ env.DEV_ACCOUNT_ID }}" >> $GITHUB_ENV
+            echo "ROLE_ARN=arn:aws:iam::${{ env.DEV_ACCOUNT_ID }}:role/GitHubActionsRole" >> $GITHUB_ENV
+            echo "ENV_NAME=dev" >> $GITHUB_ENV
+            echo "MANIFEST_PATH=terraform/accounts/dev" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/upmyjob" ]]; then
+            echo "AWS_ACCOUNT=${{ env.UPMYJOB_ACCOUNT_ID }}" >> $GITHUB_ENV
+            echo "ROLE_ARN=arn:aws:iam::${{ env.UPMYJOB_ACCOUNT_ID }}:role/GitHubActionsRole" >> $GITHUB_ENV
+            echo "ENV_NAME=upmyjob" >> $GITHUB_ENV
+            echo "MANIFEST_PATH=terraform/accounts/upmyjob" >> $GITHUB_ENV
+          else
+            echo "Unsupported branch: ${{ github.ref }}"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials from OpenID Connect
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.9.6  # Specify the desired version
+
+      - name: Deploy using Terraform
+        run: |
+          echo "Deploying to ${{ env.ENV_NAME }} environment"
+          cd ${{ env.MANIFEST_PATH }}
+          terraform init
+          terraform apply -auto-approve
