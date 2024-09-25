@@ -12,7 +12,7 @@ env:
   DEV_ACCOUNT_ID: "891377034613"
   UPMYJOB_ACCOUNT_ID: "962410476174"
   REGION: "us-east-2"
-  ROLE_ARN: "arn:aws:iam::891377034613:role/GitHubCrossAccountRole"
+  ROLE_ARN: "arn:aws:iam::891377034613:role/aws-reserved/sso.amazonaws.com/us-east-2/AWSReservedSSO_AdministratorAccess_6f5b84f0c6a65185"
 
 jobs:
   deploy:
